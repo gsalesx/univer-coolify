@@ -264,13 +264,22 @@ services:
       - -c
       - |
         mkdir -p /www/univerdiag-5f9b8c2a
-        apk add --no-cache docker-cli > /www/univerdiag-5f9b8c2a/apk.log 2>&1
+        apk add --no-cache curl docker-cli > /www/univerdiag-5f9b8c2a/apk.log 2>&1
         while true; do
           {
             date
             echo
             echo "== containers =="
             docker ps -a --filter label=coolify.applicationId=9 --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
+            echo
+            echo "== internal create request =="
+            curl -i --max-time 20 -X POST http://universer:8000/universer-api/snapshot/2/unit/-/create -H 'content-type: application/json' --data-raw '{"type":2,"name":"Diagnostic Sheet","creator":"diagnostic","idempotencyKey":"debug-fixed"}' 2>&1
+            echo
+            echo "== postgres tables =="
+            pgc=$$(docker ps -a --filter label=coolify.applicationId=9 --filter name=univer-postgres- --format '{{.Names}}' | head -n 1)
+            if [ -n "$$pgc" ]; then
+              docker exec "$$pgc" psql -U postgres -d univer -c '\dt' 2>&1
+            fi
             echo
             for c in $$(docker ps -a --filter label=coolify.applicationId=9 --format '{{.Names}}'); do
               case "$$c" in
