@@ -2,6 +2,11 @@ services:
   univer-postgres:
     image: postgres:${POSTGRES_VERSION:-16.1}
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USERNAME:-postgres} -d ${DATABASE_DBNAME:-univer}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     environment:
       POSTGRES_USER: ${DATABASE_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
@@ -25,7 +30,8 @@ services:
       PASSWORD: ${DATABASE_PASSWORD:-postgres}
       DATABASE: ${DATABASE_DBNAME:-univer}
     depends_on:
-      - univer-postgres
+      univer-postgres:
+        condition: service_healthy
     networks:
       - univer
 
@@ -101,7 +107,8 @@ services:
     image: minio/mc:latest
     restart: "no"
     depends_on:
-      - univer-minio
+      univer-minio:
+        condition: service_started
     entrypoint:
       - sh
       - -c
@@ -126,11 +133,16 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp/univers:/tmp/univers
     depends_on:
-      - init-db
-      - univer-temporal
-      - univer-redis
-      - univer-rabbitmq
-      - minio-init
+      init-db:
+        condition: service_completed_successfully
+      univer-temporal:
+        condition: service_started
+      univer-redis:
+        condition: service_started
+      univer-rabbitmq:
+        condition: service_started
+      minio-init:
+        condition: service_completed_successfully
     networks:
       - univer
 
