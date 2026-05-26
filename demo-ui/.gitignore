@@ -8,10 +8,13 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
 dist-ssr
 *.local
 build
+
+# The Coolify deploy serves the prebuilt UI, so dist is versioned here.
+!dist
+!dist/**
 
 # Editor directories and files
 .vscode/*
