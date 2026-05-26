@@ -70,6 +70,21 @@ services:
     networks:
       - univer
 
+  wait-temporal:
+    image: busybox:1.36
+    restart: "no"
+    depends_on:
+      - univer-temporal
+    command:
+      - sh
+      - -c
+      - |
+        until nc -z univer-temporal 7233; do
+          sleep 2
+        done
+    networks:
+      - univer
+
   univer-rabbitmq:
     image: rabbitmq:${RABBITMQ_VERSION:-3.12.14-management}
     restart: unless-stopped
@@ -147,6 +162,8 @@ services:
         condition: service_completed_successfully
       univer-temporal:
         condition: service_started
+      wait-temporal:
+        condition: service_completed_successfully
       univer-redis:
         condition: service_healthy
       univer-rabbitmq:
@@ -222,7 +239,7 @@ services:
       - ./backend/logs/worker-exchange:/app/logs
       - ./backend/exchange:/data/configs
     depends_on:
-      - univer-temporal
+      - wait-temporal
       - universer
     networks:
       - univer
