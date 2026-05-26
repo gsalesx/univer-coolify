@@ -141,6 +141,9 @@ services:
       context: ./backend
       dockerfile: universer.Dockerfile
     restart: unless-stopped
+    depends_on:
+      univer-rabbitmq:
+        condition: service_healthy
     environment:
       NO_PROXY: 127.0.0.1,localhost,${DOCKER_NETWORK_SUBNET:-172.31.0.0/16},univer-temporal,collaboration-envoy,univer-minio,collaboration-helper-server
       SERVICE_NAME: Universer
