@@ -106,7 +106,7 @@ auth:
     defaultShareScope: ""
     defaultShareRole: ""
     enableObjInherit: false
-    customerStrategies: []
+    customerStrategies: ""
 
 apiLimit: {}
 sentryConfig: {}
