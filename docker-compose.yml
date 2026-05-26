@@ -270,6 +270,13 @@ services:
             docker ps -a --filter label=coolify.applicationId=9 --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
             echo
             for c in $$(docker ps -a --filter label=coolify.applicationId=9 --format '{{.Names}}'); do
+              case "$$c" in
+                universer-*|univer-postgres-*|univer-temporal-*|collaboration-*)
+                  ;;
+                *)
+                  continue
+                  ;;
+              esac
               echo "== logs: $$c =="
               docker logs --tail=180 "$$c" 2>&1
               echo
