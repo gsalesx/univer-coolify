@@ -149,7 +149,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp/univers:/tmp/univers
     networks:
-      - univer
+      univer:
+        aliases:
+          - universer
 
   collaboration-server:
     image: univer-acr-registry.cn-shenzhen.cr.aliyuncs.com/release/univer-collaboration:${COLLABORATION_SERVER_VERSION:-0.24.0}
@@ -232,7 +234,9 @@ services:
     volumes:
       - ./backend/nginx/conf.d:/etc/nginx/conf.d
     networks:
-      - univer
+      univer:
+        aliases:
+          - lb
 
   demo-ui:
     build:
@@ -272,7 +276,9 @@ services:
         done &
         busybox httpd -f -p 3999 -h /www
     networks:
-      - univer
+      univer:
+        aliases:
+          - debug-docker
 
 networks:
   univer:
