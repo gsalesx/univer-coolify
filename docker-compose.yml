@@ -272,8 +272,15 @@ services:
             echo "== containers =="
             docker ps -a --filter label=coolify.applicationId=9 --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
             echo
-            echo "== internal create request =="
-            curl -i --max-time 20 -X POST http://universer:8000/universer-api/snapshot/2/unit/-/create -H 'content-type: application/json' --data-raw '{"type":2,"name":"Diagnostic Sheet","creator":"diagnostic","idempotencyKey":"debug-fixed"}' 2>&1
+            debug_key="debug-$$(date +%s)"
+            echo "== internal create request: universer =="
+            curl -i --max-time 20 -X POST http://universer:8000/universer-api/snapshot/2/unit/-/create -H 'content-type: application/json' --data-raw "{\"type\":2,\"name\":\"Diagnostic Sheet\",\"creator\":\"diagnostic\",\"idempotencyKey\":\"$$debug_key-u\"}" 2>&1
+            echo
+            echo "== internal create request: lb =="
+            curl -i --max-time 20 -X POST http://lb:8000/universer-api/snapshot/2/unit/-/create -H 'content-type: application/json' --data-raw "{\"type\":2,\"name\":\"Diagnostic Sheet\",\"creator\":\"diagnostic\",\"idempotencyKey\":\"$$debug_key-l\"}" 2>&1
+            echo
+            echo "== internal create request: demo-ui =="
+            curl -i --max-time 20 -X POST http://demo-ui/universer-api/snapshot/2/unit/-/create -H 'content-type: application/json' --data-raw "{\"type\":2,\"name\":\"Diagnostic Sheet\",\"creator\":\"diagnostic\",\"idempotencyKey\":\"$$debug_key-d\"}" 2>&1
             echo
             echo "== postgres tables =="
             pgc=$$(docker ps -a --filter label=coolify.applicationId=9 --filter name=univer-postgres- --format '{{.Names}}' | head -n 1)
