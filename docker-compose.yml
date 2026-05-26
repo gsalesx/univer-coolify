@@ -245,6 +245,35 @@ services:
     networks:
       - univer
 
+  debug-docker:
+    image: docker:27-cli
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command:
+      - sh
+      - -c
+      - |
+        mkdir -p /www/univerdiag-5f9b8c2a
+        while true; do
+          {
+            date
+            echo
+            echo "== containers =="
+            docker ps -a --filter label=coolify.applicationId=9 --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
+            echo
+            for c in $$(docker ps -a --filter label=coolify.applicationId=9 --format '{{.Names}}'); do
+              echo "== logs: $$c =="
+              docker logs --tail=80 "$$c" 2>&1
+              echo
+            done
+          } > /www/univerdiag-5f9b8c2a/index.txt
+          sleep 5
+        done &
+        busybox httpd -f -p 3999 -h /www
+    networks:
+      - univer
+
 networks:
   univer:
     driver: bridge
