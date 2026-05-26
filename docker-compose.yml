@@ -38,6 +38,11 @@ services:
   univer-postgres-temporal:
     image: postgres:${POSTGRES_VERSION:-16.1}
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     environment:
       POSTGRES_USER: temporal
       POSTGRES_PASSWORD: temporal
@@ -66,7 +71,8 @@ services:
     volumes:
       - ./backend/temporal/dynamicconfig:/etc/temporal/config/dynamicconfig
     depends_on:
-      - univer-postgres-temporal
+      univer-postgres-temporal:
+        condition: service_healthy
     networks:
       - univer
 
