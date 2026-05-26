@@ -164,7 +164,7 @@ services:
     image: envoyproxy/envoy:v1.31.3
     restart: unless-stopped
     volumes:
-      - ./backend/envoy/envoy.yaml:/etc/envoy/envoy.yaml
+      - ./backend/envoy:/etc/envoy:ro
     depends_on:
       - collaboration-server
     environment:
