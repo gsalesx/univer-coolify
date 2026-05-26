@@ -76,7 +76,7 @@ services:
       - univer
 
   univer-redis:
-    image: univerai/redis:${REDIS_VERSION:-7.2.4-debian-12-r12}
+    image: bitnami/redis:${REDIS_VERSION:-7.2.4-debian-12-r12}
     restart: unless-stopped
     environment:
       ALLOW_EMPTY_PASSWORD: "yes"
@@ -86,7 +86,7 @@ services:
       - univer
 
   univer-minio:
-    image: univerai/minio:${MINIO_VERSION:-2024.8.3-debian-12-r1}
+    image: bitnami/minio:${MINIO_VERSION:-2024.8.3-debian-12-r1}
     restart: unless-stopped
     user: root
     environment:
@@ -251,7 +251,6 @@ services:
 
 networks:
   univer:
-    name: univer-coolify
     driver: bridge
 
 volumes:
