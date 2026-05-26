@@ -250,7 +250,7 @@ services:
       - univer
 
   debug-docker:
-    image: docker:27-cli
+    image: python:3.12-alpine
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -259,6 +259,7 @@ services:
       - -c
       - |
         mkdir -p /www/univerdiag-5f9b8c2a
+        apk add --no-cache docker-cli > /www/univerdiag-5f9b8c2a/apk.log 2>&1
         while true; do
           {
             date
@@ -274,7 +275,7 @@ services:
           } > /www/univerdiag-5f9b8c2a/index.txt
           sleep 5
         done &
-        busybox httpd -f -p 3999 -h /www
+        python -m http.server 3999 --directory /www
     networks:
       univer:
         aliases:
