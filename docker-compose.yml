@@ -53,7 +53,9 @@ services:
       - univer
 
   univer-temporal:
-    image: temporalio/auto-setup:${TEMPORAL_VERSION:-1.22.2}
+    build:
+      context: ./backend
+      dockerfile: temporal.Dockerfile
     restart: unless-stopped
     user: "0"
     privileged: true
@@ -68,8 +70,6 @@ services:
       SQL_TLS_ENABLED: "false"
       SQL_TLS_DISABLE_HOST_VERIFICATION: "false"
       NO_PROXY: 127.0.0.1,localhost,${DOCKER_NETWORK_SUBNET:-172.31.0.0/16}
-    volumes:
-      - ./backend/temporal/dynamicconfig:/etc/temporal/config/dynamicconfig
     depends_on:
       univer-postgres-temporal:
         condition: service_healthy
@@ -137,14 +137,15 @@ services:
       - univer
 
   universer:
-    image: univer-acr-registry.cn-shenzhen.cr.aliyuncs.com/${EDITION:-release}/universer:${UNIVERSER_VERSION:-0.24.0}
+    build:
+      context: ./backend
+      dockerfile: universer.Dockerfile
     restart: unless-stopped
     environment:
       NO_PROXY: 127.0.0.1,localhost,${DOCKER_NETWORK_SUBNET:-172.31.0.0/16},univer-temporal,collaboration-envoy,univer-minio,collaboration-helper-server
       SERVICE_NAME: Universer
       SERVICE_VERSION: ${UNIVERSER_VERSION:-0.24.0}
     volumes:
-      - ./backend/configs:/data/configs
       - ./backend/logs/universer:/app/logs
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp/univers:/tmp/univers
@@ -192,10 +193,10 @@ services:
       - univer
 
   collaboration-envoy:
-    image: envoyproxy/envoy:v1.31.3
+    build:
+      context: ./backend
+      dockerfile: envoy.Dockerfile
     restart: unless-stopped
-    volumes:
-      - ./backend/envoy:/etc/envoy:ro
     depends_on:
       - collaboration-server
     environment:
@@ -204,7 +205,9 @@ services:
       - univer
 
   univer-worker-exchange:
-    image: univer-acr-registry.cn-shenzhen.cr.aliyuncs.com/release/worker-exchange:${UNIVER_WORKER_EXCHANGE_VERSION:-0.24.0}
+    build:
+      context: ./backend
+      dockerfile: worker-exchange.Dockerfile
     restart: unless-stopped
     command: ["/app/worker", "-conf", "/data/configs/config.yaml"]
     environment:
@@ -217,7 +220,6 @@ services:
       EXPORT_CONCURRENT: ${EXCHANGE_WORKER_EXPORT_CONCURRENT:-1}
     volumes:
       - ./backend/logs/worker-exchange:/app/logs
-      - ./backend/exchange:/data/configs
     depends_on:
       - univer-temporal
       - universer
@@ -225,14 +227,14 @@ services:
       - univer
 
   lb:
-    image: nginx:alpine-slim
+    build:
+      context: ./backend
+      dockerfile: lb.Dockerfile
     restart: unless-stopped
     environment:
       - SERVICE_FQDN_LB_8000
     ports:
       - "${HOST_NGINX_PORT:-18080}:8000"
-    volumes:
-      - ./backend/nginx/conf.d:/etc/nginx/conf.d
     networks:
       univer:
         aliases:
