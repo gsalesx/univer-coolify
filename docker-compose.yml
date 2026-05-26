@@ -242,8 +242,6 @@ services:
       - "${HOST_NGINX_PORT:-18080}:8000"
     volumes:
       - ./backend/nginx/conf.d:/etc/nginx/conf.d
-    depends_on:
-      - universer
     networks:
       - univer
 
@@ -255,8 +253,6 @@ services:
       - SERVICE_FQDN_DEMO_UI_80
     ports:
       - "3010:80"
-    depends_on:
-      - lb
     networks:
       - univer
 
