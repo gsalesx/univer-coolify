@@ -1,0 +1,133 @@
+server:
+  http:
+    addr: 0.0.0.0:8000
+    timeout: 10s
+    corsAllowOrigins: ["*"]
+    corsAllowHeaders: ["content-type", "authorization"]
+  grpc:
+    addr: 0.0.0.0:9000
+    timeout: 10s
+
+data:
+  database:
+    maxOpenConns: 100
+    maxIdleConns: 100
+    connMaxLifetime: 60
+    driver: postgresql
+    database: univer
+    dsn: host=univer-postgres port=5432 dbname=univer user=postgres password=postgres sslmode=disable TimeZone=Asia/Shanghai
+    replicaDSN: ""
+  rabbitmq:
+    enabled: true
+    addr: amqp://guest:guest@univer-rabbitmq:5672/
+    eventSync: false
+    cluster:
+      enabled: false
+      username: ""
+      password: ""
+      addr: ""
+      vhost: ""
+      schema: amqp
+  temporal:
+    addr: univer-temporal:7233
+    namespace: default
+  redis:
+    poolSize: 100
+    addr: "univer-redis:6379"
+    db: 0
+    username: ""
+    password: ""
+    read_timeout: 1s
+    write_timeout: 1s
+    tlsConfig:
+      enabled: false
+      insecure: false
+      ca: ""
+      cert: ""
+      key: ""
+  s3:
+    accessKeyID: "minio"
+    accessKeySecret: "minio123456"
+    region: "us-east-1"
+    endpoint: "http://univer-minio:9000"
+    endpointPublic: ""
+    usePathStyle: true
+    presignExpires: 3600s
+    defaultBucket: "univer"
+
+service:
+  apply:
+    addr: collaboration-envoy:10000
+    timeout: 10s
+  ssc:
+    addr: "ssc-server:5005"
+    timeout: 10s
+  collaborationHelper:
+    addr: collaboration-helper-server:5006
+    timeout: 180s
+
+unitRoutingConf:
+  tiers:
+    - tierName: normal
+      enable: true
+      upgradeCellsThreshold: 0
+      downgradeCellsThreshold: 0
+      upgradeImportTimeThreshold: 0
+      applyServerAddr: collaboration-envoy:10000
+      applyServerTimeout: 10s
+    - tierName: large
+      enable: false
+      upgradeCellsThreshold: 2000000
+      downgradeCellsThreshold: 1950000
+      upgradeImportTimeThreshold: 10
+      applyServerAddr: large-collaboration-envoy:10000
+      applyServerTimeout: 10s
+  cacheSeconds: 1800
+  refreshSeconds: 60
+  tierSwitchDelaySeconds: 60
+
+admin: []
+extra:
+  celldataMaxSize: 10485760
+
+auth:
+  enabled: false
+  univerEnabled: false
+  cookieDomain: ""
+  oidc:
+    enabled: false
+    issuer: ""
+    clientID: ""
+    clientSecret: ""
+    redirectURL: ""
+    cookieDomain: ""
+  permission:
+    enabled: false
+    defaultShareScope: ""
+    defaultShareRole: ""
+    enableObjInherit: false
+    customerStrategies: []
+
+apiLimit: {}
+sentryConfig: {}
+dataProtectionConf:
+  enableProtection: false
+  dataKeyRotate: 5s
+  dataKeyCacheExpiration: 30s
+sesConfig: {}
+usip:
+  enabled: false
+  apikey: ""
+  uri:
+    credential: http://univer-demo-usip:8080/usip/credential
+    userinfo: http://univer-demo-usip:8080/usip/userinfo
+    role: http://univer-demo-usip:8080/usip/role
+    collaborators: http://univer-demo-usip:8080/usip/collaborators
+    unitEditTime: ""
+postHogConf:
+  enabled: false
+entitlementConf:
+  enable: false
+statsConf: {}
+permissionBasedExport:
+  enabled: true

@@ -1,0 +1,9 @@
+_official/
+_start-kit/
+.env
+.env.*
+!.env.example
+node_modules/
+dist/
+logs/
+.DS_Store

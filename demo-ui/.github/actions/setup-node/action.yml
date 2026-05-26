@@ -1,0 +1,23 @@
+name: Node Setup
+description: Node.js setup for CI, including cache configuration
+
+runs:
+  using: composite
+  steps:
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v6
+      with:
+        run_install: false
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: 24
+
+    - name: show npm registry
+      run: npm config get registry
+      shell: bash
+
+    - name: Install dependencies
+      run: pnpm install
+      shell: bash

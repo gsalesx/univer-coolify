@@ -1,0 +1,33 @@
+{
+  "name": "univer-demo-ui",
+  "private": true,
+  "description": "",
+  "author": "DreamNum Inc. <developer@univer.ai>",
+  "bin": "./server.js",
+  "scripts": {
+    "start": "node ./server.js",
+    "build:pkg": "cp -r ../../dist ./site-static && pnpm i && pnpm dlx pkg . --no-bytecode --public-packages \"*\" --public"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^4.21.0",
+    "http-proxy": "^1.18.1",
+    "yaml": "^2.8.2"
+  },
+  "engines": {
+    "node": ">=18.17.0",
+    "pnpm": ">=10"
+  },
+  "packageManager": "pnpm@10.32.1",
+  "pkg": {
+    "scripts": "server.js",
+    "outputPath": "build",
+    "targets": [
+      "node18-win-x64",
+      "node18-macos-arm64"
+    ],
+    "assets": [
+      "site-static"
+    ]
+  }
+}

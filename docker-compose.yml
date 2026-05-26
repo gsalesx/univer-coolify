@@ -1,0 +1,232 @@
+services:
+  univer-postgres:
+    image: postgres:${POSTGRES_VERSION:-16.1}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DATABASE_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      POSTGRES_DB: ${DATABASE_DBNAME:-univer}
+      PGDATA: /var/lib/postgresql/data
+    command:
+      - "-c"
+      - "max_connections=${POSTGRES_MAX_CONNECTIONS:-500}"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - univer
+
+  init-db:
+    image: univer-acr-registry.cn-shenzhen.cr.aliyuncs.com/release/universer-sql:${UNIVERSER_SQL_VERSION:-0.0.22}
+    restart: "no"
+    environment:
+      HOST: univer-postgres
+      PORT: 5432
+      USERNAME: ${DATABASE_USERNAME:-postgres}
+      PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      DATABASE: ${DATABASE_DBNAME:-univer}
+    depends_on:
+      - univer-postgres
+    networks:
+      - univer
+
+  univer-postgres-temporal:
+    image: postgres:${POSTGRES_VERSION:-16.1}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+      PGDATA: /var/lib/postgresql/data
+    volumes:
+      - postgres-data-temporal:/var/lib/postgresql/data
+    networks:
+      - univer
+
+  univer-temporal:
+    image: temporalio/auto-setup:${TEMPORAL_VERSION:-1.22.2}
+    restart: unless-stopped
+    user: "0"
+    privileged: true
+    environment:
+      DB: postgresql
+      POSTGRES_SEEDS: univer-postgres-temporal
+      DB_PORT: 5432
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: temporal
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
+      TEMPORAL_CLI_SHOW_STACKS: "1"
+      SQL_TLS_ENABLED: "false"
+      SQL_TLS_DISABLE_HOST_VERIFICATION: "false"
+      NO_PROXY: 127.0.0.1,localhost,${DOCKER_NETWORK_SUBNET:-172.31.0.0/16}
+    volumes:
+      - ./backend/temporal/dynamicconfig:/etc/temporal/config/dynamicconfig
+    depends_on:
+      - univer-postgres-temporal
+    networks:
+      - univer
+
+  univer-rabbitmq:
+    image: rabbitmq:${RABBITMQ_VERSION:-3.12.14-management}
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - univer
+
+  univer-redis:
+    image: univerai/redis:${REDIS_VERSION:-7.2.4-debian-12-r12}
+    restart: unless-stopped
+    environment:
+      ALLOW_EMPTY_PASSWORD: "yes"
+    volumes:
+      - redis-data:/bitnami/redis/data
+    networks:
+      - univer
+
+  univer-minio:
+    image: univerai/minio:${MINIO_VERSION:-2024.8.3-debian-12-r1}
+    restart: unless-stopped
+    user: root
+    environment:
+      MINIO_ROOT_USER: ${S3_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${S3_PASSWORD:-minio123456}
+      MINIO_DEFAULT_BUCKETS: ${S3_DEFAULT_BUCKET:-univer}
+      MINIO_DATA_DIR: /data
+    volumes:
+      - minio-data:/data
+      - minio-data:/bitnami/minio/data
+      - minio-data:/certs
+    networks:
+      - univer
+
+  universer:
+    image: univer-acr-registry.cn-shenzhen.cr.aliyuncs.com/${EDITION:-release}/universer:${UNIVERSER_VERSION:-0.24.0}
+    restart: unless-stopped
+    environment:
+      NO_PROXY: 127.0.0.1,localhost,${DOCKER_NETWORK_SUBNET:-172.31.0.0/16},univer-temporal,collaboration-envoy,univer-minio,collaboration-helper-server
+      SERVICE_NAME: Universer
+      SERVICE_VERSION: ${UNIVERSER_VERSION:-0.24.0}
+    volumes:
+      - ./backend/configs:/data/configs
+      - ./backend/logs/universer:/app/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/univers:/tmp/univers
+    depends_on:
+      - init-db
+      - univer-temporal
+      - univer-redis
+      - univer-rabbitmq
+      - univer-minio
+    networks:
+      - univer
+
+  collaboration-server:
+    image: univer-acr-registry.cn-shenzhen.cr.aliyuncs.com/release/univer-collaboration:${COLLABORATION_SERVER_VERSION:-0.24.0}
+    restart: unless-stopped
+    environment:
+      URL_OF_APPLY_SERVICE: 0.0.0.0:5002
+      URL_OF_UNIVERSER_SERVICE: universer:8000
+      URL_OF_SNAPSHOT_SERVICE: universer:9000
+      URL_OF_HELPER_SERVICE: collaboration-helper-server:5006
+      SAVE_SHEET_SNAPSHOT_INTERVAL: ${SAVE_SHEET_SNAPSHOT_INTERVAL:-50}
+      SAVE_DOC_SNAPSHOT_INTERVAL: 50
+      UNIT_INACTIVATE_TIMEOUT: ${UNIT_INACTIVATE_TIMEOUT:-300000}
+      ENABLE_MUTATION_APPLY_INTERCEPTOR: "true"
+      NODE_OPTIONS: --max-old-space-size=${COLLABORATION_SERVER_MEMORY_LIMIT:-1024}
+      LRU_CACHE_CAPACITY: 10000
+      no_proxy: 127.0.0.1,localhost,${DOCKER_NETWORK_SUBNET:-172.31.0.0/16},universer,collaboration-helper-server
+    depends_on:
+      - universer
+      - collaboration-helper-server
+    networks:
+      - univer
+
+  collaboration-helper-server:
+    image: univer-acr-registry.cn-shenzhen.cr.aliyuncs.com/release/univer-collaboration:${COLLABORATION_SERVER_VERSION:-0.24.0}
+    restart: unless-stopped
+    command: ["pnpm", "start:helper"]
+    environment:
+      URL_OF_HELPER_SERVICE: 0.0.0.0:5006
+      URL_OF_UNIVERSER_SERVICE: universer:8000
+      URL_OF_SNAPSHOT_SERVICE: universer:9000
+      UNIT_INACTIVATE_TIMEOUT: ${UNIT_INACTIVATE_TIMEOUT:-300000}
+      NODE_OPTIONS: --max-old-space-size=${COLLABORATION_HELPER_MEMORY_LIMIT:-1024}
+      LRU_CACHE_CAPACITY: 10000
+      no_proxy: 127.0.0.1,localhost,${DOCKER_NETWORK_SUBNET:-172.31.0.0/16},universer
+    depends_on:
+      - universer
+    networks:
+      - univer
+
+  collaboration-envoy:
+    image: envoyproxy/envoy:v1.31.3
+    restart: unless-stopped
+    volumes:
+      - ./backend/envoy/envoy.yaml:/etc/envoy/envoy.yaml
+    depends_on:
+      - collaboration-server
+    environment:
+      no_proxy: 127.0.0.1,localhost,${DOCKER_NETWORK_SUBNET:-172.31.0.0/16},collaboration-server
+    networks:
+      - univer
+
+  univer-worker-exchange:
+    image: univer-acr-registry.cn-shenzhen.cr.aliyuncs.com/release/worker-exchange:${UNIVER_WORKER_EXCHANGE_VERSION:-0.24.0}
+    restart: unless-stopped
+    command: ["/app/worker", "-conf", "/data/configs/config.yaml"]
+    environment:
+      NO_PROXY: 127.0.0.1,localhost,${DOCKER_NETWORK_SUBNET:-172.31.0.0/16},univer-temporal,univer-minio,universer
+      TEMPORAL_SERVER: univer-temporal:7233
+      TEMPORAL_NAMESPACE: default
+      SERVICE_NAME: exchange-worker
+      SERVICE_VERSION: ${UNIVER_WORKER_EXCHANGE_VERSION:-0.24.0}
+      IMPORT_CONCURRENT: ${EXCHANGE_WORKER_IMPORT_CONCURRENT:-1}
+      EXPORT_CONCURRENT: ${EXCHANGE_WORKER_EXPORT_CONCURRENT:-1}
+    volumes:
+      - ./backend/logs/worker-exchange:/app/logs
+      - ./backend/exchange:/data/configs
+    depends_on:
+      - univer-temporal
+      - universer
+    networks:
+      - univer
+
+  lb:
+    image: nginx:alpine-slim
+    restart: unless-stopped
+    environment:
+      SERVICE_FQDN_LB_8000: ${SERVICE_FQDN_LB_8000:-https://api.univer.guilhermesales.com}
+    ports:
+      - "${HOST_NGINX_PORT:-18080}:8000"
+    volumes:
+      - ./backend/nginx/conf.d:/etc/nginx/conf.d
+      - ./backend/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - universer
+    networks:
+      - univer
+
+  demo-ui:
+    build:
+      context: ./demo-ui
+    restart: unless-stopped
+    environment:
+      SERVICE_FQDN_DEMO_UI_80: ${SERVICE_FQDN_DEMO_UI_80:-https://univer.guilhermesales.com}
+    depends_on:
+      - lb
+    networks:
+      - univer
+
+networks:
+  univer:
+    name: univer-coolify
+    driver: bridge
+
+volumes:
+  postgres-data:
+  postgres-data-temporal:
+  rabbitmq-data:
+  redis-data:
+  minio-data:

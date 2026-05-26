@@ -1,0 +1,6 @@
+allowBuilds:
+  protobufjs: false
+  simple-git-hooks: false
+minimumReleaseAgeExclude:
+  - '@univerjs-pro/*'
+  - '@univerjs/*'
