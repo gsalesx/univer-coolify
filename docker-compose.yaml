@@ -152,6 +152,8 @@ services:
       - ./backend/logs/universer:/app/logs
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp/univers:/tmp/univers
+    ports:
+      - "${HOST_UNIVERSER_PORT:-18081}:8000"
     networks:
       univer:
         aliases:
