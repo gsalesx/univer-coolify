@@ -197,7 +197,7 @@ services:
     image: nginx:alpine-slim
     restart: unless-stopped
     environment:
-      SERVICE_FQDN_LB_8000: ${SERVICE_FQDN_LB_8000:-https://api.univer.guilhermesales.com}
+      - SERVICE_FQDN_LB_8000
     ports:
       - "${HOST_NGINX_PORT:-18080}:8000"
     volumes:
@@ -211,7 +211,7 @@ services:
     image: nginx:alpine
     restart: unless-stopped
     environment:
-      SERVICE_FQDN_DEMO_UI_80: ${SERVICE_FQDN_DEMO_UI_80:-https://univer.guilhermesales.com}
+      - SERVICE_FQDN_DEMO_UI_80
     ports:
       - "3010:80"
     volumes:
