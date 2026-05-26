@@ -86,18 +86,30 @@ services:
       - univer
 
   univer-minio:
-    image: bitnami/minio:latest
+    image: minio/minio:latest
     restart: unless-stopped
-    user: root
+    command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${S3_USER:-minio}
       MINIO_ROOT_PASSWORD: ${S3_PASSWORD:-minio123456}
-      MINIO_DEFAULT_BUCKETS: ${S3_DEFAULT_BUCKET:-univer}
-      MINIO_DATA_DIR: /data
     volumes:
       - minio-data:/data
-      - minio-data:/bitnami/minio/data
-      - minio-data:/certs
+    networks:
+      - univer
+
+  minio-init:
+    image: minio/mc:latest
+    restart: "no"
+    depends_on:
+      - univer-minio
+    entrypoint:
+      - sh
+      - -c
+      - |
+        until mc alias set local http://univer-minio:9000 ${S3_USER:-minio} ${S3_PASSWORD:-minio123456}; do
+          sleep 2
+        done
+        mc mb --ignore-existing local/${S3_DEFAULT_BUCKET:-univer}
     networks:
       - univer
 
@@ -118,7 +130,7 @@ services:
       - univer-temporal
       - univer-redis
       - univer-rabbitmq
-      - univer-minio
+      - minio-init
     networks:
       - univer
 
