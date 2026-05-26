@@ -271,7 +271,10 @@ services:
             echo
             for c in $$(docker ps -a --filter label=coolify.applicationId=9 --format '{{.Names}}'); do
               echo "== logs: $$c =="
-              docker logs --tail=80 "$$c" 2>&1
+              docker logs --tail=180 "$$c" 2>&1
+              echo
+              echo "== app log files: $$c =="
+              docker exec "$$c" sh -c 'if [ -d /app/logs ]; then for f in /app/logs/*; do [ -f "$$f" ] || continue; echo "-- $$f --"; tail -n 160 "$$f"; done; fi' 2>&1
               echo
             done
           } > /www/univerdiag-5f9b8c2a/index.txt
