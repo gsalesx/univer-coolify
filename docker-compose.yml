@@ -76,17 +76,17 @@ services:
       - univer
 
   univer-redis:
-    image: bitnami/redis:${REDIS_VERSION:-7.2.4-debian-12-r12}
+    image: redis:7.2-alpine
     restart: unless-stopped
     environment:
       ALLOW_EMPTY_PASSWORD: "yes"
     volumes:
-      - redis-data:/bitnami/redis/data
+      - redis-data:/data
     networks:
       - univer
 
   univer-minio:
-    image: bitnami/minio:${MINIO_VERSION:-2024.8.3-debian-12-r1}
+    image: bitnami/minio:latest
     restart: unless-stopped
     user: root
     environment:
