@@ -17,7 +17,6 @@ type WorkbookResponse = {
 }
 
 let selectedUploadFile: File | null = null
-let dashboardUniverAPI: ReturnType<typeof setupUniver> | null = null
 
 function setupQuickToolbar(univerAPI: ReturnType<typeof setupUniver>) {
   document.querySelectorAll<HTMLButtonElement>('.quick-color').forEach((button) => {
@@ -95,18 +94,6 @@ async function renameWorkbook(id: string, name: string) {
   if (!response.ok) throw new Error('Nao foi possivel renomear a planilha.')
 }
 
-function getDashboardUniverAPI() {
-  if (!dashboardUniverAPI) dashboardUniverAPI = setupUniver()
-  return dashboardUniverAPI
-}
-
-async function importXlsxFile(file: File) {
-  const snapshot = await getDashboardUniverAPI().importXLSXToSnapshotAsync(file)
-  if (!snapshot) throw new Error('Nao foi possivel importar o arquivo.')
-
-  return snapshot as unknown as Record<string, unknown>
-}
-
 async function importXlsFile(file: File) {
   const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' })
   const snapshot = createDefaultWorkbookData('imported-workbook', workbookNameFromFile(file)) as any
@@ -175,7 +162,7 @@ async function uploadSelectedWorkbook() {
   }
 
   try {
-    const snapshot = extension === 'xls' ? await importXlsFile(file) : await importXlsxFile(file)
+    const snapshot = await importXlsFile(file)
     const nameInput = document.querySelector<HTMLInputElement>('#upload-workbook-name')
     const data = await saveImportedWorkbook(snapshot, normalizeWorkbookName(nameInput?.value || workbookNameFromFile(file)))
     window.location.href = workbookUrl(data.workbook.id)
