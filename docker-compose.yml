@@ -54,7 +54,7 @@ services:
 
   univer-temporal:
     build:
-      context: ./backend
+      context: https://github.com/gsalesx/univer-coolify.git#main:backend
       dockerfile: temporal.Dockerfile
     restart: unless-stopped
     user: "0"
@@ -136,9 +136,29 @@ services:
     networks:
       - univer
 
+  image-api:
+    build:
+      context: https://github.com/gsalesx/univer-coolify.git#main:image-api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - univer-minio
+      - minio-init
+    environment:
+      - SERVICE_FQDN_IMAGE_API_8080
+      - PORT=8080
+      - S3_ENDPOINT=http://univer-minio:9000
+      - S3_BUCKET=univer-images
+      - S3_ACCESS_KEY_ID=${S3_USER:-minio}
+      - S3_SECRET_ACCESS_KEY=${S3_PASSWORD:-minio123456}
+    ports:
+      - "3020:8080"
+    networks:
+      - univer
+
   universer:
     build:
-      context: ./backend
+      context: https://github.com/gsalesx/univer-coolify.git#main:backend
       dockerfile: universer.Dockerfile
     restart: unless-stopped
     depends_on:
@@ -197,7 +217,7 @@ services:
 
   collaboration-envoy:
     build:
-      context: ./backend
+      context: https://github.com/gsalesx/univer-coolify.git#main:backend
       dockerfile: envoy.Dockerfile
     restart: unless-stopped
     depends_on:
@@ -209,7 +229,7 @@ services:
 
   univer-worker-exchange:
     build:
-      context: ./backend
+      context: https://github.com/gsalesx/univer-coolify.git#main:backend
       dockerfile: worker-exchange.Dockerfile
     restart: unless-stopped
     command: ["/app/worker", "-conf", "/data/configs/config.yaml"]
@@ -231,7 +251,7 @@ services:
 
   lb:
     build:
-      context: ./backend
+      context: https://github.com/gsalesx/univer-coolify.git#main:backend
       dockerfile: lb.Dockerfile
     restart: unless-stopped
     environment:
@@ -245,7 +265,37 @@ services:
 
   demo-ui:
     build:
-      context: ./demo-ui
+      context: https://github.com/gsalesx/univer-coolify.git#main:demo-ui
+      dockerfile_inline: |
+        FROM nginx:alpine
+        COPY nginx.conf /etc/nginx/conf.d/default.conf
+        COPY dist /usr/share/nginx/html
+        RUN set -eu; \
+          sed -i 's/<title>Univer Sheet With Server Start-Kit<\/title>/<title>Univer Sheets<\/title>/' /usr/share/nginx/html/index.html; \
+          sed -i 's#</head>#<link rel="stylesheet" href="/clean-ui.css"></head>#' /usr/share/nginx/html/index.html; \
+          sed -i 's#<div id="toolbar"></div>#<header class="app-header"><div><strong>Univer Sheets</strong><span>Official open-source editor</span></div><small>Open-source mode</small></header><div id="toolbar" hidden></div>#' /usr/share/nginx/html/index.html; \
+          find /usr/share/nginx/html -name 'main*.js' -type f -exec sed -i "s/New Sheet By Univer/Untitled spreadsheet/g" {} +; \
+          printf '%s\n' \
+            'html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#f6f7fb;color:#111827;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}' \
+            ':root{--app-header-height:56px}' \
+            '#app{height:100%;display:grid!important;grid-template-rows:var(--app-header-height) minmax(0,1fr)!important;box-sizing:border-box;padding:0!important}' \
+            '.app-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 20px;background:#fff;border-bottom:1px solid #e5e7eb;box-shadow:0 1px 2px rgb(15 23 42 / 6%)}' \
+            '.app-header div{display:flex;align-items:baseline;gap:10px;min-width:0}' \
+            '.app-header strong{font-size:15px;font-weight:650}' \
+            '.app-header span,.app-header small{color:#6b7280;font-size:12px}' \
+            '#toolbar{display:none!important;height:0!important;overflow:hidden!important}' \
+            '#univer{height:100%!important;min-height:0;background:#fff;border:0!important}' > /usr/share/nginx/html/clean-ui.css; \
+          css_file="$$(find /usr/share/nginx/html/assets -name 'index-*.css' -type f | head -n 1)"; \
+          printf '%s\n' \
+            'html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#f6f7fb;color:#111827;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}' \
+            ':root{--app-header-height:56px}' \
+            '#app{height:100%;display:grid;grid-template-rows:var(--app-header-height) minmax(0,1fr);box-sizing:border-box;padding:0!important}' \
+            '.app-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 20px;background:#fff;border-bottom:1px solid #e5e7eb;box-shadow:0 1px 2px rgb(15 23 42 / 6%)}' \
+            '.app-header div{display:flex;align-items:baseline;gap:10px;min-width:0}' \
+            '.app-header strong{font-size:15px;font-weight:650}' \
+            '.app-header span,.app-header small{color:#6b7280;font-size:12px}' \
+            '#toolbar{display:none!important;height:0!important}' \
+            '#univer{height:100%!important;min-height:0;background:#fff;border:0!important}' >> "$$css_file"
     restart: unless-stopped
     environment:
       - SERVICE_FQDN_DEMO_UI_80

@@ -3,13 +3,38 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Univer Sheet With Server Start-Kit</title>
+    <title>Univer Sheets</title>
     <script type="module" crossorigin src="./main.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-CKC-UhSI.css">
+    <link rel="stylesheet" crossorigin href="./assets/index-B8nTzN0i.css">
   </head>
   <body>
     <div id="app">
-      <div id="toolbar"></div>
+      <header class="app-header">
+        <div>
+          <strong>Univer Sheets</strong>
+          <span>Official open-source editor</span>
+        </div>
+        <small>Open-source mode</small>
+      </header>
+
+      <section class="quick-toolbar" aria-label="Quick fill colors">
+        <button class="quick-color" type="button" data-fill-color="#93c5fd">
+          <span>Etiqueta</span>
+          <i class="quick-color-dot quick-color-dot--blue"></i>
+        </button>
+        <button class="quick-color" type="button" data-fill-color="#fde047">
+          <span>Faltando</span>
+          <i class="quick-color-dot quick-color-dot--yellow"></i>
+        </button>
+        <button class="quick-color" type="button" data-fill-color="#86efac">
+          <span>Correto</span>
+          <i class="quick-color-dot quick-color-dot--green"></i>
+        </button>
+        <button class="quick-color" type="button" data-fill-color="#c084fc">
+          <span>Conjuntos</span>
+          <i class="quick-color-dot quick-color-dot--purple"></i>
+        </button>
+      </section>
 
       <div id="univer"></div>
     </div>

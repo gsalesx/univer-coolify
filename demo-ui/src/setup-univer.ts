@@ -1,16 +1,17 @@
-import { createUniver, defaultTheme, LocaleType, LogLevel, mergeLocales, UniverInstanceType } from '@univerjs/presets'
+import {
+  BooleanNumber,
+  createUniver,
+  defaultTheme,
+  LocaleType,
+  LogLevel,
+  mergeLocales,
+  SheetTypes,
+  UniverInstanceType,
+} from '@univerjs/presets'
 
-import { CalculationMode, HTTPService, UniverSheetsCorePreset } from '@univerjs/preset-sheets-core'
+import { CalculationMode, UniverSheetsCorePreset } from '@univerjs/preset-sheets-core'
 import sheetsCoreEnUs from '@univerjs/preset-sheets-core/locales/en-US'
 import '@univerjs/preset-sheets-core/lib/index.css'
-
-import { UniverSheetsAdvancedPreset } from '@univerjs/preset-sheets-advanced'
-import sheetsAdvancedEnUs from '@univerjs/preset-sheets-advanced/locales/en-US'
-import '@univerjs/preset-sheets-advanced/lib/index.css'
-
-import { UniverSheetsCollaborationPreset } from '@univerjs/preset-sheets-collaboration'
-import sheetsCollaborationEnUs from '@univerjs/preset-sheets-collaboration/locales/en-US'
-import '@univerjs/preset-sheets-collaboration/lib/index.css'
 
 import { UniverSheetsThreadCommentPreset } from '@univerjs/preset-sheets-thread-comment'
 import sheetsThreadCommentEnUs from '@univerjs/preset-sheets-thread-comment/locales/en-US'
@@ -66,17 +67,11 @@ import workerURL from './worker.ts?worker&url'
 // import { setupUniverDebugPlugin } from './plugins/debug'
 
 export function setupUniver() {
-  const universerEndpoint = window.location.origin
-
-  const collaboration = true
-
   const { univerAPI, univer } = createUniver({
     locale: LocaleType.EN_US,
     locales: {
       [LocaleType.EN_US]: mergeLocales(
         sheetsCoreEnUs,
-        sheetsAdvancedEnUs,
-        sheetsCollaborationEnUs,
         sheetsThreadCommentEnUs,
         sheetsConditionalFormattingEnUs,
         sheetsDataValidationEnUs,
@@ -91,13 +86,13 @@ export function setupUniver() {
         sheetsCrosshairHighlightEnUs,
       ),
     },
-    collaboration,
     logLevel: LogLevel.VERBOSE,
     theme: defaultTheme,
     presets: [
       UniverSheetsCorePreset({
         container: 'univer',
         header: true,
+        toolbar: false,
         workerURL: new Worker(new URL(workerURL, import.meta.url), {
           type: 'module',
         }),
@@ -113,28 +108,11 @@ export function setupUniver() {
         // },
       }),
       UniverSheetsDrawingPreset({
-        collaboration,
+        collaboration: false,
         // allowImageSize: 0.01 * 1024 * 1024, // 10KB
       }),
-      UniverSheetsAdvancedPreset({
-        useWorker: true,
-        // if univer page is not in the same domain as the server, you need to set the following parameters
-        universerEndpoint,
-        // if you want to use the no-limit business feature, you can get 30-day trial license from https://univer.ai/license
-        // oxlint-disable-next-line node/prefer-global/process
-        license: process.env.UNIVER_CLIENT_LICENSE || 'your license.txt',
-        exchangeClientOptions: {
-          minSheetRowCount: 100,
-          minSheetColumnCount: 12,
-          // enableServerSideComputing: true,
-        },
-      }),
-      UniverSheetsCollaborationPreset({
-        universerEndpoint,
-        univerContainerId: 'univer',
-      }),
       UniverSheetsThreadCommentPreset({
-        collaboration,
+        collaboration: false,
       }),
       UniverSheetsConditionalFormattingPreset(),
       UniverSheetsDataValidationPreset(),
@@ -152,52 +130,44 @@ export function setupUniver() {
 
   // setupUniverDebugPlugin(univer)
 
-  const injector = univer.__getInjector()
-  // Maybe you need to add some headers to the request
-  const httpService = injector.get(HTTPService)
-  httpService.registerHTTPInterceptor({
-    priority: 0,
-    interceptor: (request, next) => {
-      // If you need to add headers to the request, you can do so here
-      // Add your headers here, for example:
-      // request.headers.set('Authorization', 'Bearer 123')
-      return next(request)
+  univer.createUnit(UniverInstanceType.UNIVER_SHEET, {
+    id: 'workbook-01',
+    locale: LocaleType.EN_US,
+    name: 'Untitled spreadsheet',
+    appVersion: '0.24.0',
+    sheetOrder: ['sheet-01'],
+    sheets: {
+      'sheet-01': {
+        type: SheetTypes.GRID,
+        id: 'sheet-01',
+        name: 'Sheet1',
+        cellData: {},
+        hidden: BooleanNumber.FALSE,
+        rowCount: 1000,
+        columnCount: 20,
+        zoomRatio: 1,
+        scrollTop: 0,
+        scrollLeft: 0,
+        defaultColumnWidth: 93,
+        defaultRowHeight: 27,
+        status: 1,
+        showGridlines: 1,
+        hideRow: [],
+        hideColumn: [],
+        rowHeader: {
+          width: 46,
+          hidden: BooleanNumber.FALSE,
+        },
+        columnHeader: {
+          height: 20,
+          hidden: BooleanNumber.FALSE,
+        },
+        selections: ['A1'],
+        rightToLeft: BooleanNumber.FALSE,
+        pluginMeta: {},
+      },
     },
   })
-
-  // check if the unit is already created
-  const url = new URL(window.location.href)
-  const unit = url.searchParams.get('unit')
-  if (unit) {
-    // waiting for the unit to be loaded
-  } else {
-    fetch(`${universerEndpoint}/universer-api/snapshot/2/unit/-/create`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        type: UniverInstanceType.UNIVER_SHEET,
-        name: 'New Sheet By Univer',
-        creator: 'user',
-      }),
-    })
-      .then((response) => {
-        if (!response.ok) throw new Error('Failed to create new sheet')
-
-        return response.json()
-      })
-      .then((data) => {
-        if (!data.unitID) throw new Error('create unit failed')
-
-        url.searchParams.set('unit', data.unitID)
-        url.searchParams.set('type', String(UniverInstanceType.UNIVER_SHEET))
-        window.location.href = url.toString()
-      })
-      .catch((error) => {
-        console.error(error)
-      })
-  }
 
   return univerAPI
 }
