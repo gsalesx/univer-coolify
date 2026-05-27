@@ -152,8 +152,6 @@ services:
       - ./backend/logs/universer:/app/logs
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp/univers:/tmp/univers
-    ports:
-      - "${HOST_UNIVERSER_PORT:-18081}:8000"
     networks:
       univer:
         aliases:
@@ -255,64 +253,6 @@ services:
       - "3010:80"
     networks:
       - univer
-
-  debug-docker:
-    image: python:3.12-alpine
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    command:
-      - sh
-      - -c
-      - |
-        mkdir -p /www/univerdiag-5f9b8c2a
-        apk add --no-cache curl docker-cli > /www/univerdiag-5f9b8c2a/apk.log 2>&1
-        while true; do
-          {
-            date
-            echo
-            echo "== containers =="
-            docker ps -a --filter label=coolify.applicationId=9 --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
-            echo
-            debug_key="debug-$$(date +%s)"
-            echo "== internal create request: universer =="
-            curl -i --max-time 20 -X POST http://universer:8000/universer-api/snapshot/2/unit/-/create -H 'content-type: application/json' --data-raw "{\"type\":2,\"name\":\"Diagnostic Sheet\",\"creator\":\"diagnostic\",\"idempotencyKey\":\"$$debug_key-u\"}" 2>&1
-            echo
-            echo "== internal create request: lb =="
-            curl -i --max-time 20 -X POST http://lb:8000/universer-api/snapshot/2/unit/-/create -H 'content-type: application/json' --data-raw "{\"type\":2,\"name\":\"Diagnostic Sheet\",\"creator\":\"diagnostic\",\"idempotencyKey\":\"$$debug_key-l\"}" 2>&1
-            echo
-            echo "== internal create request: demo-ui =="
-            curl -i --max-time 20 -X POST http://demo-ui/universer-api/snapshot/2/unit/-/create -H 'content-type: application/json' --data-raw "{\"type\":2,\"name\":\"Diagnostic Sheet\",\"creator\":\"diagnostic\",\"idempotencyKey\":\"$$debug_key-d\"}" 2>&1
-            echo
-            echo "== postgres tables =="
-            pgc=$$(docker ps -a --filter label=coolify.applicationId=9 --filter name=univer-postgres- --format '{{.Names}}' | head -n 1)
-            if [ -n "$$pgc" ]; then
-              docker exec "$$pgc" psql -U postgres -d univer -c '\dt' 2>&1
-            fi
-            echo
-            for c in $$(docker ps -a --filter label=coolify.applicationId=9 --format '{{.Names}}'); do
-              case "$$c" in
-                universer-*|univer-postgres-*|univer-temporal-*|collaboration-*)
-                  ;;
-                *)
-                  continue
-                  ;;
-              esac
-              echo "== logs: $$c =="
-              docker logs --tail=180 "$$c" 2>&1
-              echo
-              echo "== app log files: $$c =="
-              docker exec "$$c" sh -c 'if [ -d /app/logs ]; then for f in /app/logs/*; do [ -f "$$f" ] || continue; echo "-- $$f --"; tail -n 160 "$$f"; done; fi' 2>&1
-              echo
-            done
-          } > /www/univerdiag-5f9b8c2a/index.txt
-          sleep 5
-        done &
-        python -m http.server 3999 --directory /www
-    networks:
-      univer:
-        aliases:
-          - debug-docker
 
 networks:
   univer:
