@@ -87,6 +87,10 @@ export function createDefaultWorkbookData(workbookId = 'workbook-01', name = 'Un
         scrollLeft: 0,
         defaultColumnWidth: 93,
         defaultRowHeight: 27,
+        defaultStyle: {
+          ff: 'Calibri',
+          fs: 12,
+        },
         status: 1,
         showGridlines: 1,
         hideRow: [],

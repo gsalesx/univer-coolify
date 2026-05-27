@@ -1,4 +1,5 @@
 import './style.css'
+import JSZip from 'jszip'
 import * as XLSX from 'xlsx'
 
 import { createDefaultWorkbookData, setupUniver } from './setup-univer'
@@ -15,6 +16,25 @@ type WorkbookResponse = {
     snapshot: Record<string, unknown>
   }
 }
+
+type ImportedXlsxImage = {
+  row: number
+  column: number
+  blob: Blob
+  fileName: string
+}
+
+const STATUS_COLUMN_INDEX = 7
+const STATUS_COLUMN_NAME = 'Status'
+const STATUS_OPTIONS = [
+  { label: 'Pronto', color: '#c084fc' },
+  { label: 'Separado', color: '#93c5fd' },
+  { label: 'Manual', color: '#fdba74' },
+  { label: 'Editar', color: '#fca5a5' },
+  { label: 'Cancelado', color: '#dc2626' },
+  { label: 'Aprovado', color: '#86efac' },
+  { label: 'Sem fotos', color: '#d1d5db' },
+]
 
 let selectedUploadFile: File | null = null
 
@@ -94,20 +114,187 @@ async function renameWorkbook(id: string, name: string) {
   if (!response.ok) throw new Error('Nao foi possivel renomear a planilha.')
 }
 
+function getElementsByLocalName(element: ParentNode, name: string) {
+  return Array.from(element.querySelectorAll('*')).filter((node) => node.localName === name)
+}
+
+function getFirstChildText(element: Element, name: string) {
+  return getElementsByLocalName(element, name)[0]?.textContent || ''
+}
+
+function getRelationshipId(element: Element) {
+  const relationshipNamespace = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
+
+  return element.getAttribute('r:id')
+    || element.getAttribute('r:embed')
+    || element.getAttributeNS(relationshipNamespace, 'id')
+    || element.getAttributeNS(relationshipNamespace, 'embed')
+    || ''
+}
+
+function resolveZipPath(fromPart: string, target: string) {
+  if (target.startsWith('/')) return target.slice(1)
+
+  const stack = fromPart.split('/').slice(0, -1)
+
+  target.split('/').forEach((part) => {
+    if (!part || part === '.') return
+    if (part === '..') stack.pop()
+    else stack.push(part)
+  })
+
+  return stack.join('/')
+}
+
+function relationshipPathForPart(partPath: string) {
+  const parts = partPath.split('/')
+  const fileName = parts.pop()
+
+  return `${parts.join('/')}/_rels/${fileName}.rels`
+}
+
+async function readRelationships(zip: JSZip, partPath: string) {
+  const relationships = new Map<string, string>()
+  const relsFile = zip.file(relationshipPathForPart(partPath))
+
+  if (!relsFile) return relationships
+
+  const document = new DOMParser().parseFromString(await relsFile.async('string'), 'application/xml')
+
+  getElementsByLocalName(document, 'Relationship').forEach((relationship) => {
+    const id = relationship.getAttribute('Id')
+    const target = relationship.getAttribute('Target')
+
+    if (id && target) relationships.set(id, resolveZipPath(partPath, target))
+  })
+
+  return relationships
+}
+
+function mimeTypeFromPath(path: string) {
+  const extension = path.split('.').pop()?.toLowerCase()
+
+  if (extension === 'png') return 'image/png'
+  if (extension === 'gif') return 'image/gif'
+  if (extension === 'webp') return 'image/webp'
+  return 'image/jpeg'
+}
+
+async function getWorksheetPartsByName(zip: JSZip) {
+  const workbookPart = 'xl/workbook.xml'
+  const workbookFile = zip.file(workbookPart)
+  const worksheets = new Map<string, string>()
+
+  if (!workbookFile) return worksheets
+
+  const workbookRelationships = await readRelationships(zip, workbookPart)
+  const document = new DOMParser().parseFromString(await workbookFile.async('string'), 'application/xml')
+
+  getElementsByLocalName(document, 'sheet').forEach((sheet) => {
+    const name = sheet.getAttribute('name')
+    const relationshipId = getRelationshipId(sheet)
+    const worksheetPart = workbookRelationships.get(relationshipId)
+
+    if (name && worksheetPart) worksheets.set(name, worksheetPart)
+  })
+
+  return worksheets
+}
+
+async function extractXlsxImages(file: File, fileBuffer: ArrayBuffer) {
+  if (!file.name.toLowerCase().endsWith('.xlsx')) return new Map<string, ImportedXlsxImage[]>()
+
+  const zip = await JSZip.loadAsync(fileBuffer)
+  const worksheets = await getWorksheetPartsByName(zip)
+  const imagesBySheet = new Map<string, ImportedXlsxImage[]>()
+
+  for (const [sheetName, worksheetPart] of worksheets) {
+    const worksheetFile = zip.file(worksheetPart)
+    if (!worksheetFile) continue
+
+    const worksheetRelationships = await readRelationships(zip, worksheetPart)
+    const worksheetDocument = new DOMParser().parseFromString(await worksheetFile.async('string'), 'application/xml')
+
+    for (const drawing of getElementsByLocalName(worksheetDocument, 'drawing')) {
+      const drawingPart = worksheetRelationships.get(getRelationshipId(drawing))
+      const drawingFile = drawingPart ? zip.file(drawingPart) : null
+
+      if (!drawingPart || !drawingFile) continue
+
+      const drawingRelationships = await readRelationships(zip, drawingPart)
+      const drawingDocument = new DOMParser().parseFromString(await drawingFile.async('string'), 'application/xml')
+      const anchors = [
+        ...getElementsByLocalName(drawingDocument, 'twoCellAnchor'),
+        ...getElementsByLocalName(drawingDocument, 'oneCellAnchor'),
+      ]
+
+      for (const anchor of anchors) {
+        const blip = getElementsByLocalName(anchor, 'blip')[0]
+        const mediaPath = blip ? drawingRelationships.get(getRelationshipId(blip)) : null
+        const mediaFile = mediaPath ? zip.file(mediaPath) : null
+
+        if (!mediaPath || !mediaFile) continue
+
+        const marker = getElementsByLocalName(anchor, 'from')[0]
+        const row = Number(getFirstChildText(marker, 'row'))
+        const column = Number(getFirstChildText(marker, 'col'))
+
+        if (!Number.isFinite(row) || !Number.isFinite(column)) continue
+
+        const blob = await mediaFile.async('blob')
+        const images = imagesBySheet.get(sheetName) || []
+
+        images.push({
+          row,
+          column,
+          blob: new Blob([blob], { type: mimeTypeFromPath(mediaPath) }),
+          fileName: mediaPath.split('/').pop() || 'image.jpg',
+        })
+        imagesBySheet.set(sheetName, images)
+      }
+    }
+  }
+
+  return imagesBySheet
+}
+
+function escapeFormulaString(value: string) {
+  return value.replace(/"/g, '""')
+}
+
+async function uploadImportedImage(image: ImportedXlsxImage) {
+  const body = new FormData()
+  body.append('image', image.blob, image.fileName)
+
+  const response = await fetch('/api/images/upload', {
+    method: 'POST',
+    body,
+  })
+
+  if (!response.ok) throw new Error('Nao foi possivel salvar uma imagem importada.')
+
+  return (await response.json()) as { url: string }
+}
+
 async function importXlsFile(file: File) {
-  const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' })
+  const fileBuffer = await file.arrayBuffer()
+  const workbook = XLSX.read(fileBuffer, { type: 'array' })
+  const imagesBySheet = await extractXlsxImages(file, fileBuffer)
   const snapshot = createDefaultWorkbookData('imported-workbook', workbookNameFromFile(file)) as any
 
   snapshot.sheetOrder = []
   snapshot.sheets = {}
 
-  workbook.SheetNames.forEach((sheetName, index) => {
+  for (const [index, sheetName] of workbook.SheetNames.entries()) {
     const worksheet = workbook.Sheets[sheetName]
     const range = worksheet['!ref'] ? XLSX.utils.decode_range(worksheet['!ref']) : null
     const sheetId = `sheet-${index + 1}`
-    const rowCount = range ? Math.max(range.e.r + 1, 100) : 100
-    const columnCount = range ? Math.max(range.e.c + 1, 20) : 20
+    let rowCount = range ? Math.max(range.e.r + 1, 100) : 100
+    const sourceColumnCount = range ? range.e.c + 1 : 0
+    let columnCount = Math.max(sourceColumnCount >= STATUS_COLUMN_INDEX + 1 ? sourceColumnCount + 1 : STATUS_COLUMN_INDEX + 1, 20)
     const cellData: Record<string, Record<string, Record<string, unknown>>> = {}
+    const maxColumnTextLengths: Record<number, number> = {}
+    const rowData: Record<number, { h: number }> = {}
 
     if (range) {
       for (let row = range.s.r; row <= range.e.r; row += 1) {
@@ -115,14 +302,51 @@ async function importXlsFile(file: File) {
           const cell = worksheet[XLSX.utils.encode_cell({ r: row, c: column })]
           if (!cell) continue
 
+          const targetColumn = column >= STATUS_COLUMN_INDEX ? column + 1 : column
+          const value = cell.w ?? cell.v ?? ''
+          const textLength = String(value).split(/\r?\n/).reduce((max, line) => Math.max(max, line.length), 0)
+
+          maxColumnTextLengths[targetColumn] = Math.max(maxColumnTextLengths[targetColumn] || 0, textLength)
           cellData[row] ||= {}
-          cellData[row][column] = {
-            v: cell.w ?? cell.v ?? '',
+          cellData[row][targetColumn] = {
+            v: value,
             ...(cell.f ? { f: cell.f.startsWith('=') ? cell.f : `=${cell.f}` } : {}),
           }
         }
       }
     }
+
+    for (const image of imagesBySheet.get(sheetName) || []) {
+      const targetColumn = image.column >= STATUS_COLUMN_INDEX ? image.column + 1 : image.column
+      const uploadedImage = await uploadImportedImage(image)
+
+      cellData[image.row] ||= {}
+      cellData[image.row][targetColumn] = {
+        v: '',
+        f: `=IMAGE("${escapeFormulaString(uploadedImage.url)}","Foto",1)`,
+      }
+      rowCount = Math.max(rowCount, image.row + 1)
+      columnCount = Math.max(columnCount, targetColumn + 1)
+      rowData[image.row] = { h: Math.max(rowData[image.row]?.h || 0, 96) }
+      maxColumnTextLengths[targetColumn] = Math.max(maxColumnTextLengths[targetColumn] || 0, 14)
+    }
+
+    cellData[0] ||= {}
+    cellData[0][STATUS_COLUMN_INDEX] = {
+      v: STATUS_COLUMN_NAME,
+      s: {
+        bl: 1,
+        bg: { rgb: '#f3f4f6' },
+      },
+    }
+    maxColumnTextLengths[STATUS_COLUMN_INDEX] = Math.max(maxColumnTextLengths[STATUS_COLUMN_INDEX] || 0, STATUS_COLUMN_NAME.length + 4)
+
+    const columnData = Object.fromEntries(
+      Object.entries(maxColumnTextLengths).map(([column, length]) => {
+        const width = Math.min(Math.max(length * 8 + 28, 93), 420)
+        return [column, { w: width }]
+      }),
+    )
 
     snapshot.sheetOrder.push(sheetId)
     snapshot.sheets[sheetId] = {
@@ -132,8 +356,10 @@ async function importXlsFile(file: File) {
       rowCount,
       columnCount,
       cellData,
+      columnData,
+      rowData,
     }
-  })
+  }
 
   if (snapshot.sheetOrder.length === 0) {
     const sheetId = 'sheet-1'
@@ -326,6 +552,61 @@ async function loadDashboard() {
   }
 }
 
+function columnIndexToName(index: number) {
+  let value = index + 1
+  let name = ''
+
+  while (value > 0) {
+    const modulo = (value - 1) % 26
+    name = String.fromCharCode(65 + modulo) + name
+    value = Math.floor((value - modulo) / 26)
+  }
+
+  return name
+}
+
+function getStatusColumnRangeNotation(rowCount: number) {
+  const columnName = columnIndexToName(STATUS_COLUMN_INDEX)
+  return `${columnName}2:${columnName}${Math.max(rowCount, 2)}`
+}
+
+function worksheetHasStatusColumn(worksheet: any) {
+  const statusHeader = worksheet?.getRange(`${columnIndexToName(STATUS_COLUMN_INDEX)}1`).getValue()
+
+  return String(statusHeader || '').trim() === STATUS_COLUMN_NAME
+}
+
+function applyStatusDropdownToWorksheet(univerAPI: ReturnType<typeof setupUniver>, worksheet: any) {
+  const newDataValidation = (univerAPI as any).newDataValidation
+
+  if (!worksheetHasStatusColumn(worksheet) || typeof newDataValidation !== 'function') return
+
+  const rowCount = Math.max(worksheet.getMaxRows?.() || 1000, 2)
+  const rule = newDataValidation.call(univerAPI)
+    .requireValueInList(STATUS_OPTIONS.map((option) => option.label), false, true)
+    .setOptions({
+      allowBlank: true,
+      showErrorMessage: true,
+      error: 'Escolha um status da lista.',
+      formula2: STATUS_OPTIONS.map((option) => option.color).join(','),
+      renderMode: (univerAPI.Enum as any).DataValidationRenderMode?.CUSTOM,
+    })
+    .build()
+
+  const statusRange = worksheet.getRange(getStatusColumnRangeNotation(rowCount)) as any
+
+  if (typeof statusRange.setDataValidation === 'function') statusRange.setDataValidation(rule)
+}
+
+function setupStatusColumn(univerAPI: ReturnType<typeof setupUniver>) {
+  const workbook = univerAPI.getActiveWorkbook()
+  const sheets = workbook?.getSheets?.() || []
+
+  sheets.forEach((worksheet: any) => {
+    applyStatusDropdownToWorksheet(univerAPI, worksheet)
+  })
+}
+
 async function loadWorkbook(workbookId: string) {
   const response = await fetch(`/api/workbooks/${encodeURIComponent(workbookId)}`)
 
@@ -351,6 +632,7 @@ async function loadWorkbook(workbookId: string) {
   univerAPI.addEvent(univerAPI.Event.LifeCycleChanged, ({ stage }) => {
     if (stage === univerAPI.Enum.LifecycleStages.Rendered) {
       document.body.dataset.univerReady = 'true'
+      setupStatusColumn(univerAPI)
     }
   })
 }
