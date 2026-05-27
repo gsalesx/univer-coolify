@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Univer Sheets</title>
-    <script type="module" crossorigin src="./main.js?v=a4bd436"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-B8nTzN0i.css">
+    <script type="module" crossorigin src="./assets/index-Bl8asfM-.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-Dm_AOsWC.css">
   </head>
   <body>
     <div id="app">
@@ -16,6 +16,20 @@
         </div>
         <small>Open-source mode</small>
       </header>
+
+      <main id="dashboard" class="dashboard" hidden>
+        <section class="dashboard-card">
+          <div class="dashboard-title">
+            <div>
+              <h1>Planilhas</h1>
+              <p>Crie uma nova planilha ou continue de onde parou.</p>
+            </div>
+            <button id="create-workbook" class="primary-button" type="button">Criar nova planilha</button>
+          </div>
+
+          <div id="workbook-list" class="workbook-list" aria-live="polite"></div>
+        </section>
+      </main>
 
       <section class="quick-toolbar" aria-label="Quick fill colors">
         <button class="quick-color" type="button" data-fill-color="#93c5fd">
@@ -38,6 +52,6 @@
 
       <div id="univer"></div>
     </div>
-
+
   </body>
 </html>

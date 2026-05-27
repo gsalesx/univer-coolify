@@ -9,6 +9,7 @@
     "@aws-sdk/client-s3": "latest",
     "cors": "latest",
     "express": "latest",
-    "multer": "latest"
+    "multer": "latest",
+    "pg": "latest"
   }
 }

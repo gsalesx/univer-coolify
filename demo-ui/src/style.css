@@ -22,6 +22,19 @@ body {
   box-sizing: border-box;
 }
 
+body[data-view="dashboard"] #app {
+  grid-template-rows: var(--app-header-height) minmax(0, 1fr);
+}
+
+body[data-view="dashboard"] .quick-toolbar,
+body[data-view="dashboard"] #univer {
+  display: none;
+}
+
+body[data-view="editor"] .dashboard {
+  display: none;
+}
+
 .app-header {
   display: flex;
   align-items: center;
@@ -58,6 +71,94 @@ body {
   padding: 8px 20px;
   background: #fff;
   border-bottom: 1px solid #e5e7eb;
+}
+
+.dashboard {
+  min-height: 0;
+  padding: 32px;
+  overflow: auto;
+}
+
+.dashboard-card {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 28px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgb(15 23 42 / 7%);
+}
+
+.dashboard-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.dashboard-title h1 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.dashboard-title p {
+  margin: 8px 0 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.primary-button {
+  padding: 10px 16px;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  background: #2563eb;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.primary-button:hover {
+  background: #1d4ed8;
+}
+
+.workbook-list {
+  display: grid;
+  gap: 10px;
+}
+
+.workbook-item,
+.workbook-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  color: inherit;
+  text-decoration: none;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.workbook-item:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.workbook-item strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.workbook-item span,
+.workbook-empty {
+  color: #6b7280;
+  font-size: 12px;
 }
 
 .quick-color {

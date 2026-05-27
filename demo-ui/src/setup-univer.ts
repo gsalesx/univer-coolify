@@ -66,7 +66,48 @@ import workerURL from './worker.ts?worker&url'
 
 // import { setupUniverDebugPlugin } from './plugins/debug'
 
-export function setupUniver() {
+export function createDefaultWorkbookData(workbookId = 'workbook-01', name = 'Untitled spreadsheet') {
+  return {
+    id: workbookId,
+    locale: LocaleType.EN_US,
+    name,
+    appVersion: '0.24.0',
+    sheetOrder: ['sheet-01'],
+    sheets: {
+      'sheet-01': {
+        type: SheetTypes.GRID,
+        id: 'sheet-01',
+        name: 'Sheet1',
+        cellData: {},
+        hidden: BooleanNumber.FALSE,
+        rowCount: 1000,
+        columnCount: 20,
+        zoomRatio: 1,
+        scrollTop: 0,
+        scrollLeft: 0,
+        defaultColumnWidth: 93,
+        defaultRowHeight: 27,
+        status: 1,
+        showGridlines: 1,
+        hideRow: [],
+        hideColumn: [],
+        rowHeader: {
+          width: 46,
+          hidden: BooleanNumber.FALSE,
+        },
+        columnHeader: {
+          height: 20,
+          hidden: BooleanNumber.FALSE,
+        },
+        selections: ['A1'],
+        rightToLeft: BooleanNumber.FALSE,
+        pluginMeta: {},
+      },
+    },
+  }
+}
+
+export function setupUniver(workbookData: any = createDefaultWorkbookData()) {
   const { univerAPI, univer } = createUniver({
     locale: LocaleType.EN_US,
     locales: {
@@ -130,44 +171,7 @@ export function setupUniver() {
 
   // setupUniverDebugPlugin(univer)
 
-  univer.createUnit(UniverInstanceType.UNIVER_SHEET, {
-    id: 'workbook-01',
-    locale: LocaleType.EN_US,
-    name: 'Untitled spreadsheet',
-    appVersion: '0.24.0',
-    sheetOrder: ['sheet-01'],
-    sheets: {
-      'sheet-01': {
-        type: SheetTypes.GRID,
-        id: 'sheet-01',
-        name: 'Sheet1',
-        cellData: {},
-        hidden: BooleanNumber.FALSE,
-        rowCount: 1000,
-        columnCount: 20,
-        zoomRatio: 1,
-        scrollTop: 0,
-        scrollLeft: 0,
-        defaultColumnWidth: 93,
-        defaultRowHeight: 27,
-        status: 1,
-        showGridlines: 1,
-        hideRow: [],
-        hideColumn: [],
-        rowHeader: {
-          width: 46,
-          hidden: BooleanNumber.FALSE,
-        },
-        columnHeader: {
-          height: 20,
-          hidden: BooleanNumber.FALSE,
-        },
-        selections: ['A1'],
-        rightToLeft: BooleanNumber.FALSE,
-        pluginMeta: {},
-      },
-    },
-  })
+  univer.createUnit(UniverInstanceType.UNIVER_SHEET, workbookData)
 
   return univerAPI
 }

@@ -32,7 +32,7 @@ export default ({ mode }) => {
     build: {
       rollupOptions: {
         output: {
-          entryFileNames: 'main.js',
+          entryFileNames: 'assets/[name]-[hash].js',
         },
       },
     },

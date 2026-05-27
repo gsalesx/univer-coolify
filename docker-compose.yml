@@ -142,11 +142,20 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
-      - univer-minio
-      - minio-init
+      univer-postgres:
+        condition: service_healthy
+      univer-minio:
+        condition: service_started
+      minio-init:
+        condition: service_completed_successfully
     environment:
       - SERVICE_FQDN_IMAGE_API_8080
       - PORT=8080
+      - DATABASE_HOST=univer-postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=${DATABASE_USERNAME:-postgres}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-postgres}
+      - DATABASE_DBNAME=${DATABASE_DBNAME:-univer}
       - S3_ENDPOINT=http://univer-minio:9000
       - S3_BUCKET=univer-images
       - S3_ACCESS_KEY_ID=${S3_USER:-minio}
