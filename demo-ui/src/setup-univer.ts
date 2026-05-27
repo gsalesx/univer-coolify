@@ -137,7 +137,7 @@ export function setupUniver(workbookData: any = createDefaultWorkbookData()) {
       UniverSheetsCorePreset({
         container: 'univer',
         header: true,
-        toolbar: false,
+        toolbar: true,
         workerURL: new Worker(new URL(workerURL, import.meta.url), {
           type: 'module',
         }),
