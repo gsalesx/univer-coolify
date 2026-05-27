@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Univer Sheets</title>
-    <script type="module" crossorigin src="./assets/index-Bl8asfM-.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-Dm_AOsWC.css">
+    <script type="module" crossorigin src="./assets/index-BAZkTq-u.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-Dv08TWPC.css">
   </head>
   <body>
     <div id="app">
@@ -24,12 +24,51 @@
               <h1>Planilhas</h1>
               <p>Crie uma nova planilha ou continue de onde parou.</p>
             </div>
-            <button id="create-workbook" class="primary-button" type="button">Criar nova planilha</button>
+            <div class="dashboard-actions">
+              <label class="dashboard-name-field">
+                <span>Nome da planilha</span>
+                <input id="new-workbook-name" type="text" value="Untitled spreadsheet" />
+              </label>
+              <button id="create-workbook" class="primary-button" type="button">Criar nova planilha</button>
+              <button id="open-upload-modal" class="secondary-button" type="button">Upload</button>
+            </div>
           </div>
 
           <div id="workbook-list" class="workbook-list" aria-live="polite"></div>
         </section>
       </main>
+
+      <div id="upload-modal" class="upload-modal" hidden>
+        <div class="upload-dialog" role="dialog" aria-modal="true" aria-labelledby="upload-title">
+          <div class="upload-dialog-header">
+            <h2 id="upload-title">Upload de arquivo</h2>
+            <button id="close-upload-modal" class="icon-button" type="button" aria-label="Fechar">×</button>
+          </div>
+
+          <div class="upload-tabs" aria-hidden="true">
+            <span class="upload-tab upload-tab--active">Escolha seu arquivo</span>
+            <span class="upload-tab">Importar da URL</span>
+          </div>
+
+          <label class="upload-name-field">
+            <span>Nome da planilha</span>
+            <input id="upload-workbook-name" type="text" placeholder="Nome da planilha" />
+          </label>
+
+          <label id="upload-dropzone" class="upload-dropzone" for="workbook-upload-input">
+            <input id="workbook-upload-input" type="file" accept=".xls,.xlsx" hidden />
+            <strong>Busque (ou) arraste seu arquivo</strong>
+            <span>Os formatos compatíveis são .xls e .xlsx.</span>
+            <small>Tamanho máximo recomendado: 50 MB.</small>
+            <em id="upload-file-name"></em>
+          </label>
+
+          <div class="upload-dialog-actions">
+            <button id="submit-upload" class="primary-button" type="button" disabled>Upload</button>
+            <button id="cancel-upload" class="secondary-button" type="button">Cancelar</button>
+          </div>
+        </div>
+      </div>
 
       <section class="quick-toolbar" aria-label="Quick fill colors">
         <button class="quick-color" type="button" data-fill-color="#93c5fd">

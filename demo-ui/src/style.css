@@ -97,6 +97,48 @@ body[data-view="editor"] .dashboard {
   margin-bottom: 24px;
 }
 
+.dashboard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.dashboard-name-field,
+.upload-name-field {
+  display: grid;
+  gap: 6px;
+}
+
+.dashboard-name-field span,
+.upload-name-field span {
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dashboard-name-field input,
+.upload-name-field input {
+  min-width: 220px;
+  padding: 9px 12px;
+  color: #111827;
+  font: inherit;
+  font-size: 14px;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+}
+
+.upload-name-field {
+  margin-bottom: 16px;
+}
+
+.upload-name-field input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .dashboard-title h1 {
   margin: 0;
   font-size: 24px;
@@ -125,12 +167,33 @@ body[data-view="editor"] .dashboard {
   background: #1d4ed8;
 }
 
+.primary-button:disabled {
+  cursor: not-allowed;
+  background: #93c5fd;
+}
+
+.secondary-button {
+  padding: 10px 16px;
+  color: #111827;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.secondary-button:hover {
+  background: #f9fafb;
+}
+
 .workbook-list {
   display: grid;
   gap: 10px;
 }
 
-.workbook-item,
+.workbook-row,
 .workbook-empty {
   display: flex;
   align-items: center;
@@ -144,9 +207,15 @@ body[data-view="editor"] .dashboard {
   border-radius: 12px;
 }
 
+.workbook-item {
+  display: block;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
 .workbook-item:hover {
-  background: #eff6ff;
-  border-color: #bfdbfe;
+  color: #2563eb;
 }
 
 .workbook-item strong {
@@ -159,6 +228,137 @@ body[data-view="editor"] .dashboard {
 .workbook-empty {
   color: #6b7280;
   font-size: 12px;
+}
+
+.workbook-row:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.workbook-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.text-button {
+  padding: 0;
+  color: #2563eb;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.text-button:hover {
+  color: #1d4ed8;
+}
+
+.upload-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(17 24 39 / 50%);
+}
+
+.upload-modal[hidden] {
+  display: none;
+}
+
+.upload-dialog {
+  width: min(620px, 100%);
+  padding: 24px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 24px 60px rgb(15 23 42 / 24%);
+}
+
+.upload-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.upload-dialog-header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.icon-button {
+  width: 32px;
+  height: 32px;
+  color: #6b7280;
+  font: inherit;
+  font-size: 24px;
+  line-height: 1;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.upload-tabs {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.upload-tab {
+  padding: 0 24px 8px;
+  color: #111827;
+  font-size: 14px;
+}
+
+.upload-tab--active {
+  border-bottom: 2px solid #16a34a;
+}
+
+.upload-dropzone {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  padding: 36px 20px;
+  text-align: center;
+  background: #f3f4f6;
+  border: 1px dashed #d1d5db;
+  cursor: pointer;
+}
+
+.upload-dropzone.is-dragging {
+  background: #eff6ff;
+  border-color: #60a5fa;
+}
+
+.upload-dropzone strong {
+  font-size: 14px;
+}
+
+.upload-dropzone span,
+.upload-dropzone small {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.upload-dropzone em {
+  color: #2563eb;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.upload-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 28px;
 }
 
 .quick-color {

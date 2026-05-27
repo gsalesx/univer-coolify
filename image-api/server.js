@@ -38,7 +38,7 @@ const upload = multer({
 const pool = new Pool(typeof databaseUrl === 'string' ? { connectionString: databaseUrl } : databaseUrl)
 
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }))
-app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '25mb' }))
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '100mb' }))
 
 function publicBaseUrl(req) {
   if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL.replace(/\/$/, '')
@@ -152,6 +152,39 @@ app.post('/api/workbooks', async (req, res, next) => {
   }
 })
 
+app.post('/api/workbooks/import', async (req, res, next) => {
+  try {
+    const snapshot = req.body?.snapshot
+
+    if (!snapshot || typeof snapshot !== 'object') {
+      res.status(400).json({ error: 'Envie um snapshot valido.' })
+      return
+    }
+
+    const id = `workbook-${crypto.randomUUID()}`
+    const name = typeof req.body?.name === 'string' && req.body.name.trim()
+      ? req.body.name.trim()
+      : typeof snapshot.name === 'string' && snapshot.name.trim()
+        ? snapshot.name.trim()
+        : 'Untitled spreadsheet'
+    const workbookSnapshot = {
+      ...snapshot,
+      id,
+      name,
+    }
+
+    const { rows } = await pool.query(`
+      INSERT INTO workbooks (id, name, snapshot)
+      VALUES ($1, $2, $3)
+      RETURNING id, name, created_at AS "createdAt", updated_at AS "updatedAt"
+    `, [id, name, workbookSnapshot])
+
+    res.status(201).json({ workbook: rows[0] })
+  } catch (error) {
+    next(error)
+  }
+})
+
 app.get('/api/workbooks/:id', async (req, res, next) => {
   try {
     const { rows } = await pool.query(`
@@ -159,6 +192,35 @@ app.get('/api/workbooks/:id', async (req, res, next) => {
       FROM workbooks
       WHERE id = $1
     `, [req.params.id])
+
+    if (!rows[0]) {
+      res.status(404).json({ error: 'Planilha nao encontrada.' })
+      return
+    }
+
+    res.json({ workbook: rows[0] })
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.patch('/api/workbooks/:id', async (req, res, next) => {
+  try {
+    const name = typeof req.body?.name === 'string' && req.body.name.trim()
+      ? req.body.name.trim()
+      : ''
+
+    if (!name) {
+      res.status(400).json({ error: 'Envie um nome valido.' })
+      return
+    }
+
+    const { rows } = await pool.query(`
+      UPDATE workbooks
+      SET name = $2, snapshot = jsonb_set(snapshot, '{name}', to_jsonb($2::text), true), updated_at = now()
+      WHERE id = $1
+      RETURNING id, name, created_at AS "createdAt", updated_at AS "updatedAt"
+    `, [req.params.id, name])
 
     if (!rows[0]) {
       res.status(404).json({ error: 'Planilha nao encontrada.' })

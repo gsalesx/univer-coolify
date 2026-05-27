@@ -32,7 +32,8 @@
     "@univerjs/sheets-crosshair-highlight": "0.24.0",
     "@univerjs/sheets-zen-editor": "0.24.0",
     "react": "19.2.6",
-    "react-dom": "19.2.6"
+    "react-dom": "19.2.6",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "25.9.0",
